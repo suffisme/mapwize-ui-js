@@ -1,26 +1,28 @@
 import * as $ from 'jquery'
-import { compact, filter, forEach, get, has, indexOf, isArray, isFinite, set, template } from 'lodash'
+import { compact, filter, forEach, get, indexOf, isArray, isFinite, template } from 'lodash'
 
 const resultsHtml = require('./searchResults.html')
 
-const templateVenue = template(require('./templates/venue.html'))
-const templatePlace = template(require('./templates/place.html'))
-const templatePlaceList = template(require('./templates/placeList.html'))
+const templateVenue = require('./templates/venue.html')
+const templatePlace = require('./templates/place.html')
+const templatePlaceList = require('./templates/placeList.html')
 
 import { DefaultControl } from '../../control'
 import { translate } from '../../translate'
-import { getIcon, getMainFroms, getMainSearches, getTranslation } from '../../utils'
+import { callOptionnalFn, getIcon, getMainFroms, getMainSearches, getTranslation } from '../../utils'
 
 let itemSelected: any
 
 export class SearchResults extends DefaultControl {
 
+  private _options: any
   private userLocationCallback: (searchResult: any, universe?: any) => void
 
   constructor (mapInstance: any, options: any) {
     super(mapInstance)
 
     this._container = $(resultsHtml)
+    this._options = options
 
     this.listen('click', '#mwz-use-user-location', this._clickOnUserLocation.bind(this))
 
@@ -36,7 +38,7 @@ export class SearchResults extends DefaultControl {
     return 'top-left'
   }
 
-  public setResults (results: string | any[], clickOnResultCallback: (searchResult: any, universe?: any) => void, focusedField: string) {
+  public setResults (results: string | any[], clickOnResultCallback: (searchResult: any, universe?: any, analytics?: any) => void, focusedField: string) {
     itemSelected = 0
     if (results === 'mainSearches') {
       this._showMainSearchIfAny(clickOnResultCallback)
@@ -44,8 +46,8 @@ export class SearchResults extends DefaultControl {
       this._showMainFromIfAny(clickOnResultCallback)
     } else if (isArray(results)) {
       this._showSearchResult(results, (universe: any) => {
-        return (clicked: any) => {
-          clickOnResultCallback(clicked, universe)
+        return (clicked: any, analytics: any = null) => {
+          clickOnResultCallback(clicked, universe, analytics)
         }
       })
     }
@@ -147,7 +149,7 @@ export class SearchResults extends DefaultControl {
     }
   }
 
-  private _showMainSearchIfAny (onClick: (searchResult: any, universe?: any) => void) {
+  private _showMainSearchIfAny (onClick: (searchResult: any, universe?: any, analytics?: any) => void) {
     const venue = this.map.getVenue()
     const resultContainer = this._container.find('#mwz-search-results-container')
     resultContainer.html('')
@@ -158,13 +160,13 @@ export class SearchResults extends DefaultControl {
       getMainSearches(venue.mainSearches).then((mainSearches: any[]) => {
         resultContainer.html('')
         forEach(compact(mainSearches), (mainSearch: any) => {
-          resultContainer.append(this._mapwizeObjectResults(mainSearch, onClick))
+          resultContainer.append(this._mapwizeObjectResults(mainSearch, (mwzObject, analytics) => onClick(mwzObject, null, analytics), { channel: 'mainSearches' }))
         })
         this.hideLoading()
       })
     }
   }
-  private _showMainFromIfAny (onClick: (searchResult: any, universe?: any) => void) {
+  private _showMainFromIfAny (onClick: (searchResult: any, universe?: any, analytics?: any) => void) {
     const venue = this.map.getVenue()
     const resultContainer = this._container.find('#mwz-search-results-container')
     resultContainer.html('')
@@ -175,13 +177,13 @@ export class SearchResults extends DefaultControl {
       getMainFroms(venue.mainFroms).then((mainFroms: any[]) => {
         resultContainer.html('')
         forEach(compact(mainFroms), (mainFrom: any) => {
-          resultContainer.append(this._mapwizeObjectResults(mainFrom, onClick))
+          resultContainer.append(this._mapwizeObjectResults(mainFrom, (mwzObject, analytics) => onClick(mwzObject, null, analytics), null))
         })
         this.hideLoading()
       })
     }
   }
-  private _showSearchResult (results: any[], onClick: (universe: any) => (clickedResult: any) => void) {
+  private _showSearchResult (results: any[], onClick: (universe: any) => (clickedResult: any, analytics?: any) => void) {
     const venue = this.map.getVenue()
     const lang = this.map.getLanguage() || this.map.getPreferredLanguage()
     const resultContainer = this._container.find('#mwz-search-results-container')
@@ -190,20 +192,20 @@ export class SearchResults extends DefaultControl {
 
     resultContainer.html('')
 
-    if (venue && mapwize.length) {
+    if (venue && !this.map.headerManager.isInDirectionMode() && mapwize.length) {
       mapwize = this._resultsByUniverse(mapwize)
       const currentUniverse = this.map.getUniverse()
       forEach(mapwize, (resultsByUniverse: any) => {
         const setOfResultsForUniverse: any[] = []
         forEach(resultsByUniverse.results, (mwzResult: any) => {
           if (getTranslation(mwzResult, lang, 'title')) {
-            setOfResultsForUniverse.push(this._mapwizeObjectResults(mwzResult, onClick(resultsByUniverse.universe)))
+            setOfResultsForUniverse.push(this._mapwizeObjectResults(mwzResult, onClick(resultsByUniverse.universe), { channel: 'search', searchQuery: results[0] }))
           }
         })
 
         if (setOfResultsForUniverse.length) {
           if (mapwize.length > 1 || get(resultsByUniverse, 'universe._id') !== currentUniverse._id) {
-            resultContainer.append($('<li class="list-group-item list-group-item-secondary">' + get(resultsByUniverse, 'universe.name') + '</li>'))
+            resultContainer.append($('<li class="mwz-list-group-item mwz-list-group-item-secondary">' + get(resultsByUniverse, 'universe.name') + '</li>'))
           }
           resultContainer.append(setOfResultsForUniverse)
         }
@@ -212,18 +214,18 @@ export class SearchResults extends DefaultControl {
       let isEmptyResultSet = true
       forEach(mapwize, (mwzResult: any) => {
         if (getTranslation(mwzResult, lang, 'title')) {
-          resultContainer.append(this._mapwizeObjectResults(mwzResult, onClick(null)))
+          resultContainer.append(this._mapwizeObjectResults(mwzResult, onClick(null), null))
           isEmptyResultSet = false
         }
       })
 
       if (isEmptyResultSet) {
-        resultContainer.append($('<li class="list-group-item">' + translate('search_no_result') + '</li>'))
+        resultContainer.append($('<li class="mwz-list-group-item">' + translate('search_no_result') + '</li>'))
       }
     }
   }
 
-  private _mapwizeObjectResults (mwzObject: any, onClick: (clickedResult: any) => void) {
+  private _mapwizeObjectResults (mwzObject: any, onClick: (clickedResult: any, analytics: any) => void, analytics: any = null) {
     const lang = this.map.getLanguage() || this.map.getPreferredLanguage()
     const options = {
       floor: isFinite(mwzObject.floor) ? translate('on_floor', { floor: mwzObject.floor }) : '',
@@ -231,18 +233,22 @@ export class SearchResults extends DefaultControl {
       subtitle: getTranslation(mwzObject, lang, 'subTitle'),
       title: getTranslation(mwzObject, lang, 'title'),
     }
-    let templated = null
+
+    let mwzTemplate = null
     if (mwzObject.objectClass === 'venue') {
-      templated = templateVenue(options)
+      mwzTemplate = templateVenue
     } else if (mwzObject.objectClass === 'place') {
-      templated = templatePlace(options)
-    } else if (mwzObject.objectClass === 'placeList' && mwzObject.placeIds.length > 0) {
-      templated = templatePlaceList(options)
+      mwzTemplate = templatePlace
+    } else if (mwzObject.objectClass === 'placeList') {
+      mwzTemplate = templatePlaceList
     }
+
+    const transformedResultTemplate = callOptionnalFn(this._options.onObjectWillBeDisplayedInSearch, [{ html: mwzTemplate, options }, mwzObject])
+    const templated = template(transformedResultTemplate.html)(transformedResultTemplate.options)
 
     return $(templated).on('click', (e: any) => {
       e.preventDefault()
-      return onClick(mwzObject)
+      return onClick(mwzObject, analytics)
     })
   }
 

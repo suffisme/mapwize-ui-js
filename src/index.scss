@@ -1,23 +1,30 @@
 // START OF FILE
 .mapwizeui { // Nothing before this line
   @import 'custom';
-  @import '~bootstrap/scss/bootstrap';
 
   @import './header';
   @import './footer';
   @import './controls';
 
-  .tooltip {
+  .mwz-tooltip {
     font-size: .76rem;
 
-    .arrow {
+    .mwz-arrow {
       display: none;
     }
   }
 
-  .bs-tooltip-top {
+  .mwz-bs-tooltip-top {
     margin-top: 85px;
     padding: 0;
+  }
+
+  @media print {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+    .mapboxgl-ctrl-top-left, .mapboxgl-ctrl-top-right, .mapboxgl-ctrl-bottom-left, .mwz-ctrl-location {
+        display: none;
+     }
   }
 } // Nothing after this line
 // END OF FILE

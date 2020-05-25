@@ -1,5 +1,100 @@
 # Mapwize UI Changelog
 
+## 2.5.3
+
+- Fix: getMode method return mode used by current direction (#174)
+- Upgrade mapwize gl to 4.2.8
+- Upgrade dependencies
+
+## 2.5.2
+
+- Fix: click on place search result outside venue
+
+## 2.5.1
+
+- Fix: place selection when `centerOnPlaceId` is provided
+- Fix: place selection when the selected object is in other venue
+- Upgrade mapwize gl to 4.2.7
+
+## 2.5.0
+
+- Feat: Add interceptor to use custom template in search results as `onObjectWillBeDisplayedInSearch`. See doc in README-advanced.md file
+
+### /!\ BREAKING CHANGES /!\
+
+Refactor interceptors:
+
+#### `onDirectionWillBeDisplayed`
+
+```typescript
+onDirectionWillBeDisplayed: (directionOptions: any, direction: any): any => directionOptions
+```
+
+#### `onElementWillBeSelected`
+
+```typescript
+onObjectWillBeSelected: (selectionOptions: any, mwzObject: any): any => selectionOptions
+```
+
+#### `onSearchQueryWillBeSent`
+
+```typescript
+onSearchQueryWillBeSent: (searchOptions: any, searchString: string, channel: string): any => searchOptions
+```
+
+#### `onSearchResultWillBeDisplayed`
+
+```typescript
+onSearchResultsWillBeDisplayed: (results: any): any => results
+```
+
+## 2.4.9
+
+- Feat: option to use custom html template for element selection footer (#161)
+- Fix: directions search results must be limited to current universe (#162)
+
+## 2.4.8
+
+- Feat: adding support for displaying layers and places only at given zoom levels (Mapwize SDK 4.2.6)
+- Fix: search results in direction should be limited to current universe (#157)
+- Fix: current language & current universe not displayed in selector (#153)
+- Improvement: hide map controls for print (#158)
+
+## 2.4.7
+
+- Hotfix: upgrade Mapwize dependency to fix Mapbox crash on Windows in v1.8.0 (#155)
+- Feat: implement onFollowButtonClickWithoutLocation (#150)
+- Feat: only display the menu if onMenuButtonClick is a defined function, `hideMenu` option removed (#144, #151)
+- Feat: hiding the locationControl by default (#146)
+- Feat: adding documentation on how to add locales (#149)
+- Fix: fix tests on all browsers
+
+## 2.4.6
+
+__Bug on Windows fixed in 2.4.7__
+
+- Feat: adding pre-selection hook onElementWillBeSelected
+- Fix: setting locale as preferredLanguage by default
+- Logging version in console to simplify debugging
+
+## 2.4.5
+
+__Bug on Windows fixed in 2.4.7__
+
+- Fix: arrow display in selection details (#121)
+- Fix: selection and direction modules only remove their own markers (#126)
+- Fix: timeout error when running Browserstack tests (#134)
+- Fix: mapwize:directionstart event triggered twice (#132)
+- Fix: bootstrap encapsulation to avoid css and js collision (#133)
+- Refactor: Use language name instead of language abbreviations in venue language selector (#129)
+- Upgrade dependencies
+
+## 2.4.4
+
+- Fix: Cannot read property 'top' of undefined (#122)
+- Improvement: Select the to when exiting directions (#125)
+- Adding onSelectedChange and documentation regarding analytics (#123)
+
 ## 2.4.3
 
 - Improvement: Scroll floor control to display current floor (#116)

@@ -4,8 +4,8 @@
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"> -->
 
     <title><%= htmlWebpackPlugin.options.title %></title>
     <style>
@@ -82,15 +82,23 @@
             // restrictContentToOrganizationId: '',
             // restrictContentToVenueId: euratechnologieVenueId,
             restrictContentToVenueIds: [euratechnologieVenueId, demoVenueId],
+            locale: 'fr',
+            // locationControl: true,
             // mainColor: '#fca903',
-            // hideMenu: true,
             // onDirectionQueryWillBeSent: function (query) { return query; },
-            // onDirectionWillBeDisplayed: function (direction, options) { return { direction: direction, options: options }; },
-            // onSearchQueryWillBeSent: function (searchString, searchOptions) { return { searchString: searchString, searchOptions: searchOptions }; },
-            // onSearchResultWillBeDisplayed: function (results) { return results; },
+            // onDirectionWillBeDisplayed: function (options) { return options; },
+            // onSearchQueryWillBeSent: function (searchOptions) { return searchOptions; },
+            // onSearchResultsWillBeDisplayed: function (results) { return results; },
             shouldShowInformationButtonFor: function (e) {
               console.log('shouldShowInformationButtonFor', e)
               return '<span class="mwz-icon-information">i</span> ' + e.name
+            },
+            onObjectWillBeSelected: function (options, mwzObject) {
+              if (haveCustomData(mwzObject)) {
+                options.template = customTemplate(mwzObject)
+              }
+
+              return options;
             },
             onInformationButtonClick: function (e) {
               console.log('onInformationButtonClick', e)
@@ -100,12 +108,23 @@
               console.log('onMenuButtonClick')
               alert('onMenuButtonClick')
             },
-            onSelectedChange: function (e) {
-              console.log('onSelectedChange', e)
+            onSelectedChange: function (selectedObject, analytics) {
+              console.log('onSelectedChange', selectedObject, analytics)
+            },
+            onFollowButtonClickWithoutLocation() {
+              alert('onFollowButtonClickWithoutLocation')
             }
           }).then(function (instance) {
             console.log('MAP LOADED')
             mapwizeMap = instance
+
+            mapwizeMap.on('mapwize:directionstart', function (e) { console.log('directionstart', e) });
+            mapwizeMap.on('mapwize:venueenter', function (e) { console.log('venueenter', e) });
+            mapwizeMap.on('mapwize:floorchange', function (e) { console.log('floorchange', e) });
+            mapwizeMap.on('mapwize:universechange', function (e) { console.log('universechange', e) });
+            mapwizeMap.on('mapwize:languagechange', function (e) { console.log('languagechange', e) });
+            mapwizeMap.on('mapwize:venueexit', function (e) { console.log('venueexit', e) });
+
           })
         })
       }
@@ -171,6 +190,25 @@
       function remove() {
         mapwizeMap.remove()
       }
+
+      function haveCustomData(element) {
+        return element.data && element.data.FirstName && element.data.LastName;
+      }
+
+      function customTemplate(element) {
+        return '<div class="mwz-selection-header mwz-d-flex mwz-align-items-center">'
+          + '<div class="mwz-icon">'
+          + '<img src="<' + '%= icon %>" alt="Menu" />'
+          + '</div>'
+          + '<div class="mwz-data mwz-flex-grow-1">'
+          + '<strong class="titleInfos">' + element.data.FirstName + ' ' + element.data.LastName + '</strong><br />'
+          + '</div>'
+          + '</div>'
+          + '<button id="mwz-footer-directions-button" type="button" class="mwz-btn mwz-btn-link mwz-directions-button">'
+          + '<img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkNhbHF1ZV8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIgdmlld0JveD0iMCAwIDMwIDMwIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAzMCAzMDsiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxwYXRoIHN0eWxlPSJmaWxsOndoaXRlOyIgZD0iTTI4LjYsMTRMMTYsMS40Yy0wLjYtMC42LTEuNC0wLjYtMiwwTDEuNCwxNGMtMC42LDAuNi0wLjYsMS40LDAsMkwxNCwyOC42YzAuNiwwLjYsMS40LDAuNiwyLDBMMjguNiwxNkMyOS4xLDE1LjQsMjkuMSwxNC42LDI4LjYsMTR6IE0yMiwxMy45bC0zLjksMy43Yy0wLjIsMC4yLTAuNSwwLTAuNS0wLjJ2LTIuMmMwLTAuMi0wLjEtMC4zLTAuMy0wLjNoLTQuNWMtMC4yLDAtMC4zLDAuMS0wLjMsMC4zdjMuMmMwLDAuMi0wLjEsMC4zLTAuMywwLjNoLTEuOWMtMC4yLDAtMC4zLTAuMS0wLjMtMC4zdi00LjVjMC0wLjksMC43LTEuNiwxLjYtMS42aDUuOGMwLjIsMCwwLjMtMC4xLDAuMy0wLjN2LTJjMC0wLjMsMC4zLTAuNCwwLjUtMC4ybDMuOCwzLjhDMjIuMSwxMy42LDIyLjEsMTMuOCwyMiwxMy45eiIvPjwvc3ZnPg==" alt="Directions"> Directions'
+          + '</button>';
+      }
+
     </script>
   </body>
 
